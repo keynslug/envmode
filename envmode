@@ -1,0 +1,41 @@
+#!/bin/sh
+
+[ "$(id -u)" = 0 ] || {
+	export SUDO_HOME="${HOME}"
+	echo "You need to become a root to proceed ..."
+	sudo -Es $(pwd)/$0 $*
+	exit $?
+}
+
+[ -z "${SUDO_HOME}" ] && exit 1
+
+# Install zsh
+case "$(uname -s)" in
+	Linux)
+		apt-get -y install zsh
+		;;
+	Darwin)
+		port install zsh
+		;;
+	*)
+		echo "Skipping zsh install ..."
+		;;
+esac
+
+# Change default shell
+ZSH_PATH=$(sh -c "which zsh")
+[ "$?" = "0" ] || { echo "Zsh not found!"; exit 1; }
+echo
+echo "Zsh was found at:" ${ZSH_PATH}
+chsh -s ${ZSH_PATH} ${SUDO_USER}
+
+# Copy envmode contents
+ENVMODE_PATH="$(dirname $0)"
+echo
+echo "Copying new files from ${ENVMODE_PATH} to ${SUDO_HOME} ..."
+rsync -rav --exclude="/.git" --exclude="$(basename $0)" "${ENVMODE_PATH}/" "${SUDO_HOME}/"
+
+# Some suggestions
+echo
+echo "Now you need to log out and log in again"
+echo
